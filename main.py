@@ -3,14 +3,14 @@ import random
 import sys
 import threading
 import time
+import copy
 
 cell_size = 10
 grid = (40, 40)
 time_delay = 0.001
 
-running = True
-initial_cells = []
 cells = []
+running = True
 display_size = (
     grid[0] * cell_size * 2 + cell_size,
     grid[1] * cell_size * 2 + cell_size,
@@ -45,53 +45,70 @@ class Cell:
 def create_cells():
     for y in range(cell_size, grid[1] * cell_size * 2 + cell_size, 2 * cell_size):
         for x in range(cell_size, grid[0] * cell_size * 2 + cell_size, 2 * cell_size):
-            cell = Cell(x, y)
-            initial_cells.append(cell)
-            cells.append(cell)
+            cells.append(Cell(x, y))
 
 
-def depth_first_search(cell):
-    neighbours = []
-    cell.visited = True
+def depth_first_search(initial_cell):
+    initial_cells = copy.deepcopy(cells)
+    cell_stack = []
 
-    def add_cell(index):
-        if not initial_cells[index].visited:
-            neighbours.append(initial_cells[index])
+    initial_cell.visited = True
+    cell_stack.append(initial_cell)
 
-    if cell.x - cell_size >= initial_cells[0].x:
-        add_cell(int(cell.index - 1))
+    while len(cell_stack) > 0:
+        current_cell = cell_stack.pop()
+        neighbours = []
 
-    if cell.x + cell_size <= initial_cells[len(initial_cells) - 1].x:
-        add_cell(int(cell.index + 1))
+        def add_neighbour(index):
+            if not initial_cells[index].visited:
+                neighbours.append(initial_cells[index])
 
-    if cell.y - cell_size >= initial_cells[0].y:
-        add_cell(int(cell.index - grid[0]))
+        if current_cell.x - cell_size >= initial_cells[0].x:
+            add_neighbour(int(current_cell.index - 1))
 
-    if cell.y + cell_size <= initial_cells[len(initial_cells) - 1].y:
-        add_cell(int(cell.index + grid[0]))
+        if current_cell.x + cell_size <= initial_cells[len(initial_cells) - 1].x:
+            add_neighbour(int(current_cell.index + 1))
 
-    if len(neighbours) == 0:
-        return
+        if current_cell.y - cell_size >= initial_cells[0].y:
+            add_neighbour(int(current_cell.index - grid[0]))
 
-    random_indexes = list(range(len(neighbours)))
-    random.shuffle(random_indexes)
+        if current_cell.y + cell_size <= initial_cells[len(initial_cells) - 1].y:
+            add_neighbour(int(current_cell.index + grid[0]))
 
-    for index in random_indexes:
-        random_cell = neighbours[index]
-        if random_cell.visited:
-            return
+        if len(neighbours) == 0:
+            continue
 
-        x = cell.x + (random_cell.x - cell.x) / 2
-        y = cell.y + (random_cell.y - cell.y) / 2
+        cell_stack.append(current_cell)
+
+        random_index = random.randrange(len(neighbours))
+        random_cell = neighbours[random_index]
+
+        x = current_cell.x + (random_cell.x - current_cell.x) / 2
+        y = current_cell.y + (random_cell.y - current_cell.y) / 2
         cells.append(Cell(x, y))
 
-        time.sleep(time_delay)
-        depth_first_search(random_cell)
+        random_cell.visited = True
+        cell_stack.append(random_cell)
+
+        # time.sleep(time_delay)
 
 
-create_cells()
+def a_star(initial_cell):
+    initial_cell.f = 0
+    open_list = [initial_cell]
+    closed_list = []
 
-thread = threading.Thread(target=depth_first_search, args=(cells[0],))
+    while len(open_list) > 0:
+        q_index = "something"
+
+
+def thread_target():
+    create_cells()
+    depth_first_search(cells[0])
+    a_star(cells[0])
+
+
+thread = threading.Thread(target=thread_target)
 thread.daemon = True
 thread.start()
 
