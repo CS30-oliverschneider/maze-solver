@@ -1,15 +1,19 @@
 import pygame
 import random
 import sys
+import threading
+import time
 
-cell_size = 50
-display_size = (350, 350)
+cell_size = 10
+grid = (40, 40)
+time_delay = 0.001
+
 running = True
+initial_cells = []
 cells = []
-frames_per_step = 50
-grid = (
-    (display_size[0] - cell_size) / cell_size / 2, 
-    (display_size[1] - cell_size) / cell_size / 2
+display_size = (
+    grid[0] * cell_size * 2 + cell_size,
+    grid[1] * cell_size * 2 + cell_size,
 )
 
 # Initialize pygame
@@ -22,6 +26,7 @@ class Cell:
         self.x = x
         self.y = y
         self.size = cell_size
+        self.color = "white"
         self.index = len(cells)
         self.visited = False
 
@@ -30,24 +35,24 @@ class Cell:
         self.top = True
         self.bottom = True
 
-        cells.append(self)
-
     def __str__(self):
         return str(vars(self))
 
     def draw(self):
-        pygame.draw.rect(surface, "white", (self.x, self.y, cell_size, cell_size))
+        pygame.draw.rect(surface, self.color, (self.x, self.y, cell_size, cell_size))
 
 
 def create_cells():
-    for y in range(cell_size, display_size[1], cell_size * 2):
-        for x in range(cell_size, display_size[0], cell_size * 2):
-            Cell(x, y)
+    for y in range(cell_size, grid[1] * cell_size * 2 + cell_size, 2 * cell_size):
+        for x in range(cell_size, grid[0] * cell_size * 2 + cell_size, 2 * cell_size):
+            cell = Cell(x, y)
+            initial_cells.append(cell)
+            cells.append(cell)
 
 
 def depth_first_search(cell):
-    initial_cells = cells.copy()
     neighbours = []
+    cell.visited = True
 
     def add_cell(index):
         if not initial_cells[index].visited:
@@ -65,8 +70,6 @@ def depth_first_search(cell):
     if cell.y + cell_size <= initial_cells[len(initial_cells) - 1].y:
         add_cell(int(cell.index + grid[0]))
 
-    print(cell.index, len(neighbours))
-
     if len(neighbours) == 0:
         return
 
@@ -77,14 +80,20 @@ def depth_first_search(cell):
         random_cell = neighbours[index]
         if random_cell.visited:
             return
-        
-        random_cell.visited = True
-        Cell(cell.x + (random_cell.x - cell.x) / 2, cell.y + (random_cell.y - cell.y) / 2)
+
+        x = cell.x + (random_cell.x - cell.x) / 2
+        y = cell.y + (random_cell.y - cell.y) / 2
+        cells.append(Cell(x, y))
+
+        time.sleep(time_delay)
         depth_first_search(random_cell)
 
 
 create_cells()
-depth_first_search(cells[0])
+
+thread = threading.Thread(target=depth_first_search, args=(cells[0],))
+thread.daemon = True
+thread.start()
 
 
 # Program Loop
