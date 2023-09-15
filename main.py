@@ -6,15 +6,15 @@ import time
 import copy
 from operator import attrgetter
 
-cell_size = 10
-grid = (10, 10)
+cell_size = 50
+grid = (3, 3)
 time_delay = 0.001
 
 cells = []
 running = True
 display_size = (
-    grid[0] * cell_size * 2 + cell_size,
-    grid[1] * cell_size * 2 + cell_size,
+    grid[0] * cell_size + cell_size * 2,
+    grid[1] * cell_size + cell_size * 2,
 )
 
 # Initialize pygame
@@ -44,8 +44,8 @@ class Cell:
 
 
 def create_cells():
-    for y in range(cell_size, grid[1] * cell_size * 2, cell_size):
-        for x in range(cell_size, grid[0] * cell_size * 2, cell_size):
+    for y in range(cell_size, grid[1] * cell_size + cell_size, cell_size):
+        for x in range(cell_size, grid[0] * cell_size + cell_size, cell_size):
             if (x / cell_size) % 2 == 0 or (y / cell_size) % 2 == 0:
                 cells.append(None)
                 continue
@@ -55,8 +55,8 @@ def create_cells():
 
 
 def find_neighbours(cell, cell_spacing):
+    # print(cell.index)
     neighbours = []
-    index_spacing = cell_spacing / cell_size
 
     left = cell_size
     right = display_size[0] - cell_size
@@ -64,26 +64,27 @@ def find_neighbours(cell, cell_spacing):
     bottom = display_size[1] - cell_size
 
     def add_neighbour(index):
+        # print(index)
         if cells[index] != None and not cells[index].visited:
             neighbours.append(cells[index])
 
-    if cell.x - cell_spacing >= left:
-        add_neighbour(int(cell.index - index_spacing))
+    if cell.x - cell_spacing * cell_size >= left:
+        add_neighbour(int(cell.index - cell_spacing))
 
-    if cell.x + cell_spacing <= right:
-        add_neighbour(int(cell.index + index_spacing))
+    if cell.x + cell_spacing * cell_size <= right:
+        add_neighbour(int(cell.index + cell_spacing))
 
-    if cell.y - cell_spacing >= top:
-        add_neighbour(int(cell.index - grid[0] * index_spacing))
+    if cell.y - cell_spacing * cell_size >= top:
+        add_neighbour(int(cell.index - (grid[0] - 1) * cell_spacing))
 
-    if cell.y + cell_spacing <= bottom:
-        add_neighbour(int(cell.index + grid[0] * index_spacing))
+    if cell.y + cell_spacing * cell_size <= bottom:
+        add_neighbour(int(cell.index + (grid[0] - 1) * cell_spacing))
 
     return neighbours
 
 
 def coords_to_index(x, y):
-    return int(((x - cell_size) / cell_size) * ((y - cell_size) / cell_size))
+    return int((x / cell_size - 1) + grid[0] * (y / cell_size - 1))
 
 
 def depth_first_search(initial_cell):
@@ -94,7 +95,7 @@ def depth_first_search(initial_cell):
 
     while len(cell_stack) > 0:
         current_cell = cell_stack.pop()
-        neighbours = find_neighbours(current_cell, 2 * cell_size)
+        neighbours = find_neighbours(current_cell, 2)
 
         if len(neighbours) == 0:
             continue
@@ -107,6 +108,7 @@ def depth_first_search(initial_cell):
         x = current_cell.x + (random_cell.x - current_cell.x) / 2
         y = current_cell.y + (random_cell.y - current_cell.y) / 2
         index = coords_to_index(x, y)
+
         cells[index] = Cell(x, y, index)
 
         random_cell.visited = True
@@ -128,7 +130,9 @@ def a_star(initial_cell):
 
 def thread_target():
     create_cells()
-    depth_first_search(cells[0])
+    print(coords_to_index(50, 100))
+    # print(find_neighbours(cells[0], 2))
+    # depth_first_search(cells[0])
     # a_star(cells[0])
 
 
