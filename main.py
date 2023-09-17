@@ -3,12 +3,14 @@ import random
 import sys
 import threading
 import time
-import copy
 from operator import attrgetter
 
-cell_size = 50
-grid = (3, 3)
-time_delay = 0.001
+cell_size = 4
+grid = (199, 199)
+time_delay = 0
+wait_num = 10000
+start_cell = None
+goal_cell = None
 
 cells = []
 running = True
@@ -31,13 +33,22 @@ class Cell:
         self.index = index
         self.visited = False
 
-        self.left = True
-        self.right = True
-        self.top = True
-        self.bottom = True
+        self.f = 0
+        self.g = 0
+        self.h = 0
 
     def __str__(self):
         return str(vars(self))
+
+    def update_color(self):
+        if self.index == 0:
+            self.color = "blue"
+        else:
+            self.color = (
+                100,
+                255,
+                255,
+            )
 
     def draw(self):
         pygame.draw.rect(surface, self.color, (self.x, self.y, cell_size, cell_size))
@@ -55,7 +66,6 @@ def create_cells():
 
 
 def find_neighbours(cell, cell_spacing):
-    # print(cell.index)
     neighbours = []
 
     left = cell_size
@@ -64,21 +74,20 @@ def find_neighbours(cell, cell_spacing):
     bottom = display_size[1] - cell_size
 
     def add_neighbour(index):
-        # print(index)
-        if cells[index] != None and not cells[index].visited:
+        if cells[index] != None and not getattr(cells[index], "visited", False):
             neighbours.append(cells[index])
 
     if cell.x - cell_spacing * cell_size >= left:
         add_neighbour(int(cell.index - cell_spacing))
 
-    if cell.x + cell_spacing * cell_size <= right:
+    if cell.x + cell_spacing * cell_size < right:
         add_neighbour(int(cell.index + cell_spacing))
 
     if cell.y - cell_spacing * cell_size >= top:
-        add_neighbour(int(cell.index - (grid[0] - 1) * cell_spacing))
+        add_neighbour(int(cell.index - grid[0] * cell_spacing))
 
-    if cell.y + cell_spacing * cell_size <= bottom:
-        add_neighbour(int(cell.index + (grid[0] - 1) * cell_spacing))
+    if cell.y + cell_spacing * cell_size < bottom:
+        add_neighbour(int(cell.index + grid[0] * cell_spacing))
 
     return neighbours
 
@@ -87,15 +96,23 @@ def coords_to_index(x, y):
     return int((x / cell_size - 1) + grid[0] * (y / cell_size - 1))
 
 
-def depth_first_search(initial_cell):
+def depth_first_search():
     cell_stack = []
 
-    initial_cell.visited = True
-    cell_stack.append(initial_cell)
+    start_cell.visited = True
+    cell_stack.append(start_cell)
 
     while len(cell_stack) > 0:
         current_cell = cell_stack.pop()
+        current_cell.color = "red"
         neighbours = find_neighbours(current_cell, 2)
+
+        if time_delay > 0:
+            time.sleep(time_delay)
+        elif wait_num > 0:
+            wait()
+
+        current_cell.color = "white"
 
         if len(neighbours) == 0:
             continue
@@ -105,8 +122,8 @@ def depth_first_search(initial_cell):
         random_index = random.randrange(len(neighbours))
         random_cell = neighbours[random_index]
 
-        x = current_cell.x + (random_cell.x - current_cell.x) / 2
-        y = current_cell.y + (random_cell.y - current_cell.y) / 2
+        x = int(current_cell.x + (random_cell.x - current_cell.x) / 2)
+        y = int(current_cell.y + (random_cell.y - current_cell.y) / 2)
         index = coords_to_index(x, y)
 
         cells[index] = Cell(x, y, index)
@@ -114,30 +131,94 @@ def depth_first_search(initial_cell):
         random_cell.visited = True
         cell_stack.append(random_cell)
 
-        if time_delay > 0:
-            time.sleep(time_delay)
+    for cell in cells:
+        if cell != None:
+            del cell.visited
 
 
-def a_star(initial_cell):
-    initial_cell.f = 0
-    open_list = [initial_cell]
+def a_star():
+    open_list = [start_cell]
     closed_list = []
 
     while len(open_list) > 0:
-        smallest_f = min(open_list, key=attrgetter("f"))
-        open_list.remove(smallest_f)
+        current_cell = min(open_list, key=attrgetter("f"))
+        open_list.remove(current_cell)
+        closed_list.append(current_cell)
+        current_cell.color = "red"
+
+        if same_position(current_cell, goal_cell):
+            return
+
+        neighbours = find_neighbours(current_cell, 1)
+        for neighbour in neighbours:
+            if neighbour in closed_list:
+                continue
+
+            neighbour.g = current_cell.g + 1
+            neighbour.h = compute_h(neighbour)
+            neighbour.f = neighbour.g + neighbour.h
+            neighbour.parent = current_cell
+            neighbour.update_color()
+
+            for open_cell in open_list:
+                if same_position(neighbour, open_cell) and neighbour.g > open_cell.g:
+                    continue
+
+            open_list.append(neighbour)
+
+        if time_delay > 0:
+            time.sleep(time_delay)
+        elif wait_num > 0:
+            wait()
+
+        current_cell.update_color()
+
+
+def compute_h(source):
+    return abs(source.x - goal_cell.x) + abs(source.y - goal_cell.y)
+
+
+def trace_path():
+    current_cell = goal_cell
+
+    while current_cell.index > 1:
+        current_cell = current_cell.parent
+
+        if current_cell.index > 0:
+            current_cell.color = "yellow"
+
+        if time_delay > 0:
+            time.sleep(time_delay)
+        elif wait_num > 0:
+            wait()
+
+
+def same_position(cell1, cell2):
+    if (cell1.x, cell1.y) == (cell2.x, cell2.y):
+        return True
+    else:
+        return False
 
 
 def thread_target():
+    global start_cell
+    global goal_cell
+
     create_cells()
-    print(coords_to_index(50, 100))
-    # print(find_neighbours(cells[0], 2))
-    # depth_first_search(cells[0])
-    # a_star(cells[0])
+    start_cell = cells[0]
+    goal_cell = cells[len(cells) - 1]
+
+    depth_first_search()
+    a_star()
+    trace_path()
 
 
-thread = threading.Thread(target=thread_target)
-thread.daemon = True
+def wait():
+    for _ in range(wait_num):
+        pass
+
+
+thread = threading.Thread(target=thread_target, daemon=True)
 thread.start()
 
 
