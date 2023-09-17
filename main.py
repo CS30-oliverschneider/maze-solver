@@ -1,14 +1,15 @@
 import pygame
 import random
+import math
 import sys
 import threading
 import time
 from operator import attrgetter
 
-cell_size = 4
-grid = (199, 199)
+cell_size = 5
+grid = (375, 193)
 time_delay = 0
-wait_num = 10000
+wait_nums = (1000, 1000, 10000)
 start_cell = None
 goal_cell = None
 
@@ -44,17 +45,17 @@ class Cell:
         if self.index == 0:
             self.color = "blue"
         else:
-            self.color = (
-                100,
-                255,
-                255,
-            )
+            max_h = display_size[0] + display_size[1] - 4 * cell_size
+            normalized_color = int(self.h / max_h * 255)
+            color_value = min(normalized_color, 255)
+            self.color = (0, color_value, 255)
 
     def draw(self):
         pygame.draw.rect(surface, self.color, (self.x, self.y, cell_size, cell_size))
 
 
 def create_cells():
+    current_cell = None
     for y in range(cell_size, grid[1] * cell_size + cell_size, cell_size):
         for x in range(cell_size, grid[0] * cell_size + cell_size, cell_size):
             if (x / cell_size) % 2 == 0 or (y / cell_size) % 2 == 0:
@@ -62,7 +63,15 @@ def create_cells():
                 continue
 
             index = coords_to_index(x, y)
-            cells.append(Cell(x, y, index))
+            current_cell = Cell(x, y, index)
+            cells.append(current_cell)
+
+            if index == 0:
+                global start_cell
+                start_cell = current_cell
+
+    global goal_cell
+    goal_cell = current_cell
 
 
 def find_neighbours(cell, cell_spacing):
@@ -107,10 +116,7 @@ def depth_first_search():
         current_cell.color = "red"
         neighbours = find_neighbours(current_cell, 2)
 
-        if time_delay > 0:
-            time.sleep(time_delay)
-        elif wait_num > 0:
-            wait()
+        wait(wait_nums[0])
 
         current_cell.color = "white"
 
@@ -146,8 +152,8 @@ def a_star():
         closed_list.append(current_cell)
         current_cell.color = "red"
 
-        if same_position(current_cell, goal_cell):
-            return
+        if current_cell.index == goal_cell.index:
+            break
 
         neighbours = find_neighbours(current_cell, 1)
         for neighbour in neighbours:
@@ -161,17 +167,22 @@ def a_star():
             neighbour.update_color()
 
             for open_cell in open_list:
-                if same_position(neighbour, open_cell) and neighbour.g > open_cell.g:
+                if neighbour.index == open_cell.index and neighbour.g > open_cell.g:
                     continue
 
             open_list.append(neighbour)
 
-        if time_delay > 0:
-            time.sleep(time_delay)
-        elif wait_num > 0:
-            wait()
+        wait(wait_nums[1])
 
         current_cell.update_color()
+
+    # for cell in cells:
+    #     if (
+    #         cell != None
+    #         and cell.index != start_cell.index
+    #         and cell.index != goal_cell.index
+    #     ):
+    #         cell.color = "white"
 
 
 def compute_h(source):
@@ -185,19 +196,9 @@ def trace_path():
         current_cell = current_cell.parent
 
         if current_cell.index > 0:
-            current_cell.color = "yellow"
+            current_cell.color = "purple"
 
-        if time_delay > 0:
-            time.sleep(time_delay)
-        elif wait_num > 0:
-            wait()
-
-
-def same_position(cell1, cell2):
-    if (cell1.x, cell1.y) == (cell2.x, cell2.y):
-        return True
-    else:
-        return False
+        wait(wait_nums[2])
 
 
 def thread_target():
@@ -205,15 +206,12 @@ def thread_target():
     global goal_cell
 
     create_cells()
-    start_cell = cells[0]
-    goal_cell = cells[len(cells) - 1]
-
     depth_first_search()
     a_star()
     trace_path()
 
 
-def wait():
+def wait(wait_num):
     for _ in range(wait_num):
         pass
 
