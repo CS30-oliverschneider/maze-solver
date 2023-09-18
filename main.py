@@ -7,8 +7,7 @@ import time
 from operator import attrgetter
 
 cell_size = 5
-grid = (375, 193)
-time_delay = 0
+grid = (253, 183)
 wait_nums = (1000, 0, 10000)
 start_cell = None
 goal_cell = None
@@ -210,8 +209,17 @@ def wait(wait_num):
         pass
 
 
-thread = threading.Thread(target=thread_target, daemon=True)
-thread.start()
+def start():
+    global cells
+    cells = []
+
+    surface.fill("black")
+
+    thread = threading.Thread(target=thread_target, daemon=True)
+    thread.start()
+
+
+start()
 
 
 # Program Loop
@@ -219,6 +227,8 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+            start()
 
     for cell in cells:
         if cell != None:
