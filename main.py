@@ -9,7 +9,7 @@ from operator import attrgetter
 cell_size = 5
 grid = (375, 193)
 time_delay = 0
-wait_nums = (1000, 1000, 10000)
+wait_nums = (1000, 0, 10000)
 start_cell = None
 goal_cell = None
 
@@ -46,8 +46,7 @@ class Cell:
             self.color = "blue"
         else:
             max_h = display_size[0] + display_size[1] - 4 * cell_size
-            normalized_color = int(self.h / max_h * 255)
-            color_value = min(normalized_color, 255)
+            color_value = min(int(self.h / max_h * 255), 255)
             self.color = (0, color_value, 255)
 
     def draw(self):
@@ -176,14 +175,6 @@ def a_star():
 
         current_cell.update_color()
 
-    # for cell in cells:
-    #     if (
-    #         cell != None
-    #         and cell.index != start_cell.index
-    #         and cell.index != goal_cell.index
-    #     ):
-    #         cell.color = "white"
-
 
 def compute_h(source):
     return abs(source.x - goal_cell.x) + abs(source.y - goal_cell.y)
@@ -196,7 +187,10 @@ def trace_path():
         current_cell = current_cell.parent
 
         if current_cell.index > 0:
-            current_cell.color = "purple"
+            max_h = display_size[0] + display_size[1] - 4 * cell_size
+            color_value = min(int(current_cell.h / max_h * 255), 255)
+
+            current_cell.color = (255, 255 - color_value, 0)
 
         wait(wait_nums[2])
 
