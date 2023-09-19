@@ -1,9 +1,7 @@
 import pygame
 import random
-import math
 import sys
 import threading
-import time
 from operator import attrgetter
 
 cell_size = 5
